@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HAS Pricing Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#FBFBFD; --surface:#FFFFFF; --surface2:#F5F5F7; --border:rgba(0,0,0,0.08);
+      --blue:#0071E3; --blue-h:#0077ED; --blue-l:#E8F1FC;
+      --text:#1D1D1F; --text2:#6E6E73; --text3:#AEAEB2;
+      --green:#34C759; --orange:#FF9500; --red:#FF3B30; --purple:#AF52DE; --teal:#30B0C7;
+      --r-lg:18px; --r-md:12px; --r-sm:8px;
+      --sh-sm:0 2px 8px rgba(0,0,0,0.06); --sh-md:0 4px 24px rgba(0,0,0,0.08); --sh-lg:0 8px 40px rgba(0,0,0,0.14);
+      --tr:0.22s cubic-bezier(0.4,0,0.2,1);
+    }
+    html { font-size:16px; }
+    body { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; -webkit-font-smoothing:antialiased; }
+
+    /* HERO */
+    .hero { background:linear-gradient(160deg,#1D1D1F 0%,#2D2D2F 55%,#1a2a4a 100%); padding:52px 24px 44px; text-align:center; position:relative; overflow:hidden; }
+    .hero::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(0,113,227,.18) 0%,transparent 70%); pointer-events:none; }
+    .hero-eye { font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#6E9FD0; margin-bottom:8px; }
+    .hero h1 { font-size:clamp(1.8rem,4vw,2.8rem); font-weight:700; color:#fff; letter-spacing:-.02em; line-height:1.1; margin-bottom:6px; }
+    .hero p { font-size:15px; color:rgba(255,255,255,.5); }
+
+    /* NAV TABS */
+    .tab-nav { display:flex; background:#fff; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; box-shadow:0 1px 0 var(--border); }
+    .tab-btn { flex:1; padding:14px 8px; font-size:14px; font-weight:600; color:var(--text2); background:none; border:none; cursor:pointer; border-bottom:2px solid transparent; transition:all var(--tr); font-family:inherit; display:flex; align-items:center; justify-content:center; gap:6px; }
+    .tab-btn:hover { color:var(--text); background:var(--surface2); }
+    .tab-btn.active { color:var(--blue); border-bottom-color:var(--blue); }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+
+    /* LAYOUT */
+    .container { max-width:760px; margin:0 auto; padding:32px 20px 80px; }
+
+    /* CARD */
+    .card { background:var(--surface); border-radius:var(--r-lg); box-shadow:var(--sh-sm); border:1px solid var(--border); padding:24px; margin-bottom:14px; transition:box-shadow var(--tr); }
+    .card:focus-within { box-shadow:var(--sh-md); }
+    .card-header { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+    .card-icon { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+    .ci-blue{background:var(--blue-l)} .ci-green{background:#E5F8EC} .ci-orange{background:#FFF3E0} .ci-purple{background:#F3EEFF} .ci-teal{background:#E0F7F4} .ci-red{background:#FFEBEA}
+    .card-title { font-size:15px; font-weight:600; color:var(--text); letter-spacing:-.01em; }
+
+    /* DELIVERY PICKER */
+    .delivery-picker { display:flex; gap:12px; }
+    @media(max-width:480px){.delivery-picker{flex-direction:column}}
+    .d-opt{display:none}
+    .d-lbl { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:20px 12px; background:var(--surface2); border:2px solid transparent; border-radius:var(--r-md); cursor:pointer; transition:all var(--tr); text-align:center; }
+    .d-lbl:hover{background:#ECECF0}
+    .d-icon{font-size:26px; line-height:1}
+    .d-title{font-size:14px; font-weight:600; color:var(--text)}
+    .d-sub{font-size:12px; color:var(--text2)}
+    .d-opt:checked+.d-lbl{background:var(--blue-l); border-color:var(--blue)}
+    .d-opt:checked+.d-lbl .d-title{color:var(--blue)}
+
+    /* SEGMENTED */
+    .segmented{display:flex; background:var(--surface2); border-radius:var(--r-sm); padding:3px}
+    .segmented input[type=radio]{display:none}
+    .segmented label{flex:1; text-align:center; padding:8px 4px; font-size:13px; font-weight:500; color:var(--text2); cursor:pointer; border-radius:6px; transition:all var(--tr); margin:0; text-transform:none; letter-spacing:0}
+    .segmented label span{display:block; font-size:11px; color:var(--text3); margin-top:1px; font-weight:400}
+    .segmented input[type=radio]:checked+label{background:var(--surface); color:var(--text); font-weight:600; box-shadow:0 1px 4px rgba(0,0,0,.1)}
+    .segmented input[type=radio]:checked+label span{color:var(--blue)}
+
+    /* FIELDS */
+    .field{margin-bottom:14px} .field:last-child{margin-bottom:0}
+    .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    @media(max-width:520px){.field-row{grid-template-columns:1fr}}
+    label{display:block; font-size:11px; font-weight:600; color:var(--text2); letter-spacing:.04em; text-transform:uppercase; margin-bottom:5px}
+    input[type=text],input[type=number],select,textarea{width:100%; padding:10px 13px; background:var(--surface2); border:1.5px solid transparent; border-radius:var(--r-sm); font-size:15px; color:var(--text); font-family:inherit; outline:none; transition:border-color var(--tr),background var(--tr),box-shadow var(--tr); appearance:none; -webkit-appearance:none}
+    input:focus,select:focus,textarea:focus{border-color:var(--blue); background:#fff; box-shadow:0 0 0 3px rgba(0,113,227,.12)}
+    select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236E6E73' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:36px; cursor:pointer}
+    textarea{resize:vertical; min-height:90px; line-height:1.5}
+    input::placeholder,textarea::placeholder{color:var(--text3)}
+
+    /* PILLS */
+    .pill{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:500; padding:5px 10px; border-radius:20px; margin-top:8px}
+    .pill-blue{background:var(--blue-l); color:var(--blue)}
+    .pill-orange{background:#FFF3E0; color:var(--orange)}
+    .pill-purple{background:#F3EEFF; color:var(--purple)}
+    .pill-red{background:#FFEBEA; color:var(--red)}
+    .pill-green{background:#E5F8EC; color:#1A8A3A}
+
+    /* DIVIDER */
+    .divider{height:1px; background:var(--border); margin:18px 0}
+
+    /* BUTTONS */
+    .btn-calculate{width:100%; padding:15px; background:var(--blue); color:#fff; font-size:17px; font-weight:600; font-family:inherit; border:none; border-radius:var(--r-md); cursor:pointer; letter-spacing:-.01em; transition:background var(--tr),transform var(--tr),box-shadow var(--tr); margin-top:6px}
+    .btn-calculate:hover{background:var(--blue-h); box-shadow:0 4px 16px rgba(0,113,227,.35)}
+    .btn-calculate:active{transform:scale(.98)}
+    .btn-row{display:flex; gap:10px; margin-top:4px; flex-wrap:wrap}
+    .btn-sec{flex:1; min-width:80px; padding:11px 8px; background:var(--surface2); color:var(--text); font-size:14px; font-weight:500; font-family:inherit; border:none; border-radius:var(--r-sm); cursor:pointer; transition:background var(--tr); white-space:nowrap; text-align:center}
+    .btn-sec:hover{background:#E8E8ED}
+    .btn-sec.save{background:#E5F8EC; color:#1A8A3A}
+    .btn-sec.save:hover{background:#D0F4DC}
+    .btn-sec.submit{background:var(--blue-l); color:var(--blue)}
+    .btn-sec.submit:hover{background:#D5E8FA}
+    .btn-sec.danger{color:var(--red)}
+
+    /* RESULTS */
+    #results{display:none; animation:slideUp .35s cubic-bezier(.4,0,.2,1)}
+    @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    .result-hero{background:linear-gradient(135deg,#0071E3 0%,#0051A8 100%); border-radius:var(--r-lg); padding:28px 24px; margin-bottom:14px; text-align:center; color:#fff}
+    .rh-label{font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; opacity:.7; margin-bottom:5px}
+    .rh-total{font-size:clamp(2.2rem,7vw,3.2rem); font-weight:700; letter-spacing:-.03em; line-height:1; margin-bottom:3px}
+    .rh-vat{font-size:13px; opacity:.65}
+    .rh-meta{margin-top:16px; display:flex; justify-content:center; gap:20px; flex-wrap:wrap}
+    .rh-mi{font-size:12px; opacity:.75} .rh-mi strong{display:block; font-size:14px; font-weight:600; opacity:1}
+    .breakdown-table{width:100%; border-collapse:collapse}
+    .breakdown-table tr{border-bottom:1px solid var(--border)}
+    .breakdown-table tr:last-child{border-bottom:none}
+    .breakdown-table td{padding:11px 0; font-size:15px}
+    .breakdown-table td:last-child{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; padding-left:12px}
+    .sub-desc{font-size:12px; color:var(--text2)}
+    .amt{font-weight:500}
+    .tr-total td{font-weight:700; font-size:15px; padding-top:12px}
+    .tr-vat td{color:var(--text2); font-size:14px}
+    .tr-grand td{font-size:17px; font-weight:700; border-top:2px solid var(--border); padding-top:14px}
+    .tr-note td{color:var(--orange); font-size:13px; padding:4px 0}
+
+    .unavail-note{background:#FFEBEA; border-radius:var(--r-sm); padding:9px 13px; font-size:13px; color:var(--red); margin-top:8px; display:none}
+
+    /* MODAL */
+    .modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; animation:fadein .2s}
+    @keyframes fadein{from{opacity:0}to{opacity:1}}
+    .modal{background:#fff; border-radius:var(--r-lg); padding:28px; width:100%; max-width:440px; box-shadow:var(--sh-lg); animation:slideUp .25s cubic-bezier(.4,0,.2,1)}
+    .modal h3{font-size:18px; font-weight:700; margin-bottom:16px; letter-spacing:-.01em}
+    .modal-actions{display:flex; gap:10px; margin-top:20px}
+    .modal-actions .btn-calculate{margin:0; font-size:15px; padding:12px}
+    .modal-actions .btn-sec{padding:12px}
+    .modal .field{margin-bottom:14px}
+
+    /* SAVED QUOTES TAB */
+    .sq-toolbar{display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap}
+    .sq-toolbar h2{font-size:20px; font-weight:700; letter-spacing:-.01em; flex:1}
+    .folder-filter{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px}
+    .folder-chip{padding:5px 12px; border-radius:20px; font-size:13px; font-weight:500; background:var(--surface2); color:var(--text2); border:none; cursor:pointer; font-family:inherit; transition:all var(--tr)}
+    .folder-chip:hover{background:#E8E8ED}
+    .folder-chip.active{background:var(--blue-l); color:var(--blue)}
+    .quote-card{background:var(--surface); border-radius:var(--r-md); border:1px solid var(--border); padding:18px; margin-bottom:10px; transition:box-shadow var(--tr); cursor:pointer}
+    .quote-card:hover{box-shadow:var(--sh-md)}
+    .qc-top{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px}
+    .qc-name{font-size:16px; font-weight:600; color:var(--text)}
+    .qc-total{font-size:16px; font-weight:700; color:var(--blue); white-space:nowrap}
+    .qc-meta{font-size:12px; color:var(--text2); display:flex; gap:10px; flex-wrap:wrap}
+    .qc-tag{display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; background:var(--surface2); color:var(--text2)}
+    .qc-actions{display:flex; gap:8px; margin-top:12px}
+    .qc-btn{padding:6px 12px; font-size:13px; font-weight:500; border:none; border-radius:6px; cursor:pointer; font-family:inherit; transition:background var(--tr)}
+    .qc-btn.view{background:var(--blue-l); color:var(--blue)}
+    .qc-btn.view:hover{background:#D5E8FA}
+    .qc-btn.move{background:var(--surface2); color:var(--text2)}
+    .qc-btn.move:hover{background:#E8E8ED}
+    .qc-btn.del{background:#FFEBEA; color:var(--red)}
+    .qc-btn.del:hover{background:#FFD6D4}
+    .empty-state{text-align:center; padding:60px 20px; color:var(--text2)}
+    .empty-state .es-icon{font-size:48px; margin-bottom:12px}
+    .empty-state p{font-size:15px}
+
+    .hidden{display:none!important}
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eye">Hybrid Automation Services</div>
+  <h1>Pricing Calculator</h1>
+  <p>Schedule of Rates · Quote Builder</p>
+</div>
+
+<!-- TAB NAV -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('calc')" id="tab-calc">🧮 Calculator</button>
+  <button class="tab-btn" onclick="switchTab('saved')" id="tab-saved">📁 Saved Quotes <span id="saved-count" style="background:var(--blue);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;display:none"></span></button>
+</div>
+
+<!-- ═══════════════════ CALCULATOR TAB ═══════════════════ -->
+<div class="tab-content active" id="tab-content-calc">
+<div class="container">
+
+  <!-- JOB DETAILS -->
+  <div class="card">
+    <div class="card-header"><div class="card-icon ci-blue">📋</div><div class="card-title">Job Details</div></div>
+    <div class="field-row">
+      <div class="field"><label for="jobNumber">Job Number</label><input type="text" id="jobNumber" placeholder="e.g. JOB-00123" /></div>
+      <div class="field"><label for="salesOpp">Sales Opportunity</label><input type="text" id="salesOpp" placeholder="e.g. SO-00456" /></div>
+    </div>
+  </div>
+
+  <!-- DELIVERY METHOD -->
+  <div class="card">
+    <div class="card-header"><div class="card-icon ci-purple">🚀</div><div class="card-title">How is this job being delivered?</div></div>
+    <div class="delivery-picker">
+      <input type="radio" name="delivery" id="d-self" value="self" class="d-opt" checked />
+      <label for="d-self" class="d-lbl" onclick="onDeliveryChange('self')">
+        <span class="d-icon">🔧</span><span class="d-title">Self Delivered</span><span class="d-sub">Using our own engineers</span>
+      </label>
+      <input type="radio" name="delivery" id="d-sub" value="sub" class="d-opt" />
+      <label for="d-sub" class="d-lbl" onclick="onDeliveryChange('sub')">
+        <span class="d-icon">🤝</span><span class="d-title">Subcontracted</span><span class="d-sub">Using a subcontractor</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ── SELF DELIVERED FLOW ── -->
+  <div id="selfFlow">
+    <div class="card">
+      <div class="card-header"><div class="card-icon ci-purple">📍</div><div class="card-title">Zone</div></div>
+      <div class="field">
+        <label>Select Zone</label>
+        <div class="segmented">
+          <input type="radio" name="zone" id="z1" value="Zone 1" checked /><label for="z1">Zone 1 <span>Manchester</span></label>
+          <input type="radio" name="zone" id="z2" value="Zone 2" /><label for="z2">Zone 2 <span>Leeds</span></label>
+          <input type="radio" name="zone" id="z3" value="Zone 3" /><label for="z3">Zone 3 <span>London</span></label>
+        </div>
+      </div>
+      <div id="zone-driving-note" class="pill pill-blue hidden">🚗 Driving charges apply — enter GPS driving time in Labour section</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon ci-blue">🔧</div><div class="card-title">Job Type</div></div>
+      <div class="field">
+        <label for="jobType">Select Job Type</label>
+        <select id="jobType" onchange="onJobTypeChange()">
+          <optgroup label="── PPM — Standard Rate">
+            <option>HAS - PPM Electrical (temporary)</option>
+            <option>HAS - PPM Mechanical (temporary)</option>
+            <option>HAS - PPM Remedial Electrical</option>
+            <option>HAS - PPM Remedial Mechanical</option>
+            <option>HAS - Project Report</option>
+            <option>HAS PPM Air Handling Unit SFG20</option>
+            <option>HAS PPM ASWH SFG20</option>
+            <option>HAS PPM Automatic Transfer Switch SFG20</option>
+            <option>HAS PPM Disabled Refuge Alarm SFG20</option>
+            <option>HAS PPM Electric Overdoor Air Curtain SFG20</option>
+            <option>HAS PPM Emergency Lighting 10 Minute Test SFG20</option>
+            <option>HAS PPM Emergency Lighting 3 hour SFG20</option>
+            <option>HAS PPM EV Charger SFG20</option>
+            <option>HAS PPM Extract Fan SFG20</option>
+            <option>HAS PPM Fire Doors SFG20</option>
+            <option>HAS PPM HIU SFG20</option>
+            <option>HAS PPM Leak Detection SFG20</option>
+            <option>HAS PPM MVHR SFG20</option>
+            <option>HAS PPM PAT Testing SFG20</option>
+            <option>HAS PPM Point Of Use Water Heater SFG20</option>
+            <option>HAS PPM Siphonic Rainwater and Drainage System Maintenance SFG20</option>
+            <option>HAS PPM Solar PV SFG20</option>
+            <option>HAS PPM Sprinkler Head Visual Inspection SFG20</option>
+            <option>HAS PPM Sump Pump SFG20</option>
+            <option>HAS PPM Switch Gear. and Distribution Thermal Imaging SFG20</option>
+            <option>HAS PPM Trace Heating SFG20</option>
+            <option>HAS PPM Unvented Cylinder SFG20</option>
+          </optgroup>
+          <optgroup label="── PPM — Specialist Rate">
+            <option>HAS CCTV SFG20</option>
+            <option>HAS PPM Access Control SFG20</option>
+            <option>HAS PPM Air Conditioning SFG20</option>
+            <option>HAS PPM Fire Alarm SFG20</option>
+            <option>HAS PPM Intercom SFG20</option>
+            <option>HAS PPM Intruder Alarm SFG20</option>
+            <option>HAS PPM Sprinkler System SFG20</option>
+          </optgroup>
+          <optgroup label="── Reactive — Standard Rate">
+            <option>HAS - Reactive Callout (Electrical)</option>
+            <option>HAS - Reactive Callout (Joinery)</option>
+            <option>HAS - Reactive Callout (Mechanical)</option>
+            <option>HAS - Reactive Callout (Agreed Rates)</option>
+            <option>HAS - Reactive Remedial (Electrical)</option>
+            <option>HAS - Reactive Remedial (Mechanical)</option>
+            <option>HAS - Reactive Remedial (Joinery)</option>
+          </optgroup>
+          <optgroup label="── Reactive — Specialist Rate">
+            <option>HAS - Access Control Reactive</option>
+            <option>HAS - Air Conditioning Reactive</option>
+            <option>HAS - CCTV Reactive</option>
+            <option>HAS - Commercial Gas Reactive</option>
+            <option>HAS - Fire Systems Reactive</option>
+          </optgroup>
+          <optgroup label="── Reactive — Private (Zone 1 Only)">
+            <option>HAS - Reactive Private (Electrical)</option>
+            <option>HAS - Reactive Private (Joinery)</option>
+            <option>HAS - Reactive Private (Mechanical)</option>
+          </optgroup>
+        </select>
+        <div id="unavail-note" class="unavail-note">⚠️ This job type is not available for the selected zone.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon ci-green">⏱</div><div class="card-title">Labour</div></div>
+      <div class="field-row">
+        <div class="field"><label for="labourHours">Labour Hours</label><input type="number" id="labourHours" min="0" step="0.5" placeholder="e.g. 2.5" oninput="updateMinNote()" /></div>
+        <div class="field hidden" id="drivingField"><label for="drivingHours">Driving Hours <span style="font-weight:400;text-transform:none;font-size:10px;color:var(--blue)">(GPS)</span></label><input type="number" id="drivingHours" min="0" step="0.25" placeholder="e.g. 1.5" /></div>
+      </div>
+      <div id="min-note" class="pill pill-orange hidden">⚠️ Zone 2/3 minimum 2 hours will be applied</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon ci-orange">🪛</div><div class="card-title">Materials</div></div>
+      <div class="field">
+        <label for="materialsCostSelf">Materials Cost (ex VAT)</label>
+        <input type="number" id="materialsCostSelf" min="0" step="0.01" placeholder="£ 0.00" />
+        <div class="pill pill-orange">📦 25% markup will be applied</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon ci-blue">📝</div><div class="card-title">Description of Works</div></div>
+      <div class="field">
+        <label for="descSelf">Describe the works to be carried out</label>
+        <textarea id="descSelf" placeholder="e.g. Annual PPM inspection of fire alarm panel and all call points across 3 floors..."></textarea>
+      </div>
+    </div>
+  </div><!-- /selfFlow -->
+
+  <!-- ── SUBCONTRACTED FLOW ── -->
+  <div id="subFlow" class="hidden">
+    <div class="card">
+      <div class="card-header"><div class="card-icon ci-teal">🤝</div><div class="card-title">Subcontractor</div></div>
+      <div class="field">
+        <label for="subCost">Subcontractor Cost (ex VAT)</label>
+        <input type="number" id="subCost" min="0" step="0.01" placeholder="£ 0.00" oninput="updateSubPreview()" />
+        <div id="sub-preview" class="pill pill-purple">💼 Enter cost to see markup tier</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon ci-purple">📐</div><div class="card-title">Project Management</div></div>
+      <div class="field">
+        <label for="pmHours">Project Management Hours Required</label>
+        <input type="number" id="pmHours" min="0" step="0.5" placeholder="e.g. 4" />
+        <div class="pill pill-purple">🕐 Charged at £50 per hour</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon ci-blue">📝</div><div class="card-title">Description of Works</div></div>
+      <div class="field">
+        <label for="descSub">Describe the works to be carried out</label>
+        <textarea id="descSub" placeholder="e.g. Subcontracted replacement of commercial gas boiler, includes commissioning..."></textarea>
+      </div>
+    </div>
+  </div><!-- /subFlow -->
+
+  <button class="btn-calculate" onclick="calculate()">Calculate Quote →</button>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div style="height:20px"></div>
+    <div class="result-hero">
+      <div class="rh-label">Total Quote Value</div>
+      <div class="rh-total" id="res-total">£0.00</div>
+      <div class="rh-vat">Excluding VAT</div>
+      <div class="rh-meta">
+        <div class="rh-mi"><strong id="res-job">—</strong>Job Number</div>
+        <div class="rh-mi"><strong id="res-opp">—</strong>Sales Opp</div>
+        <div class="rh-mi"><strong id="res-del">—</strong>Delivery</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon ci-blue">📊</div><div class="card-title">Quote Breakdown</div></div>
+      <table class="breakdown-table" id="breakdown"></table>
+      <div id="res-desc-section" class="hidden" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border)">
+        <div style="font-size:12px; font-weight:600; color:var(--text2); letter-spacing:.04em; text-transform:uppercase; margin-bottom:6px">Description of Works</div>
+        <div id="res-desc" style="font-size:14px; color:var(--text); line-height:1.6"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="btn-row">
+        <button class="btn-sec save" onclick="openSaveModal()">💾 Save</button>
+        <button class="btn-sec submit" onclick="openSubmitModal()">⬆️ Submit</button>
+        <button class="btn-sec" onclick="window.print()">🖨 Print</button>
+        <button class="btn-sec" onclick="copyBreakdown()">📋 Copy</button>
+        <button class="btn-sec danger" onclick="resetForm()">✕ Reset</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+</div><!-- /calc tab -->
+
+<!-- ═══════════════════ SAVED QUOTES TAB ═══════════════════ -->
+<div class="tab-content" id="tab-content-saved">
+<div class="container">
+  <div class="sq-toolbar">
+    <h2>Saved Quotes</h2>
+    <button class="btn-sec" onclick="openNewFolderModal()" style="white-space:nowrap">＋ New Folder</button>
+  </div>
+  <div class="folder-filter" id="folderFilter"></div>
+  <div id="quoteList"></div>
+</div>
+</div>
+
+<!-- ══════════════ MODALS ══════════════ -->
+
+<!-- SAVE MODAL -->
+<div id="saveModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3>💾 Save Quote</h3>
+    <div class="field"><label for="quoteName">Quote Name</label><input type="text" id="quoteName" placeholder="e.g. Manchester Fire Alarm PPM" /></div>
+    <div class="field">
+      <label for="quoteFolder">Folder</label>
+      <select id="quoteFolder"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sec" onclick="closeModal('saveModal')">Cancel</button>
+      <button class="btn-calculate" onclick="saveQuote()">Save Quote</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUBMIT MODAL -->
+<div id="submitModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3>⬆️ Submit to Big Change</h3>
+    <p style="font-size:14px; color:var(--text2); margin-bottom:14px; line-height:1.5">This will create a quote in Big Change using the details below. Make sure you have saved the quote first.</p>
+    <div style="background:var(--surface2); border-radius:var(--r-sm); padding:14px; font-size:13px; line-height:1.7; font-family:monospace; max-height:200px; overflow-y:auto" id="submitPreview"></div>
+    <div style="background:#FFF3E0; border-radius:var(--r-sm); padding:10px 13px; font-size:13px; color:var(--orange); margin-top:12px">⚙️ Big Change API endpoint not yet configured. Contact your system administrator.</div>
+    <div class="modal-actions">
+      <button class="btn-sec" onclick="closeModal('submitModal')">Close</button>
+      <button class="btn-calculate" onclick="submitToBigChange()" style="opacity:.5; cursor:not-allowed">Submit (Pending Config)</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW FOLDER MODAL -->
+<div id="folderModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3>📁 New Folder</h3>
+    <div class="field"><label for="newFolderName">Folder Name</label><input type="text" id="newFolderName" placeholder="e.g. Manchester PPM 2025" /></div>
+    <div class="modal-actions">
+      <button class="btn-sec" onclick="closeModal('folderModal')">Cancel</button>
+      <button class="btn-calculate" onclick="createFolder()">Create Folder</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW QUOTE MODAL -->
+<div id="viewModal" class="modal-bg hidden">
+  <div class="modal" style="max-width:560px; max-height:90vh; overflow-y:auto">
+    <h3 id="viewTitle">Quote</h3>
+    <div id="viewContent"></div>
+    <div class="modal-actions">
+      <button class="btn-sec" onclick="closeModal('viewModal')">Close</button>
+      <button class="btn-sec submit" onclick="openSubmitFromView()">⬆️ Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOVE FOLDER MODAL -->
+<div id="moveModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3>📁 Move to Folder</h3>
+    <div class="field"><label for="moveFolder">Select Folder</label><select id="moveFolder"></select></div>
+    <div class="modal-actions">
+      <button class="btn-sec" onclick="closeModal('moveModal')">Cancel</button>
+      <button class="btn-calculate" onclick="confirmMove()">Move</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════
+const BIG_CHANGE_API_URL = ''; // Set this when API is configured
+
+// ═══════════════════════════════════════
+//  SOR DATA  [first, second, subsequent]
+// ═══════════════════════════════════════
+const SOR = {
+  // STANDARD  Z1:[140,70,70]  Z2:[230,0,80]  Z3:[250,0,90]
+  "HAS - PPM Electrical (temporary)":         {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - PPM Mechanical (temporary)":         {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - PPM Remedial Electrical":            {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - PPM Remedial Mechanical":            {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - Project Report":                     {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Air Handling Unit SFG20":          {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM ASWH SFG20":                       {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Automatic Transfer Switch SFG20":  {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Disabled Refuge Alarm SFG20":      {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Electric Overdoor Air Curtain SFG20":{"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Emergency Lighting 10 Minute Test SFG20":{"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Emergency Lighting 3 hour SFG20":  {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM EV Charger SFG20":                 {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Extract Fan SFG20":                {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Fire Doors SFG20":                 {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM HIU SFG20":                        {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Leak Detection SFG20":             {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM MVHR SFG20":                       {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM PAT Testing SFG20":                {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Point Of Use Water Heater SFG20":  {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Siphonic Rainwater and Drainage System Maintenance SFG20":{"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Solar PV SFG20":                   {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Sprinkler Head Visual Inspection SFG20":{"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Sump Pump SFG20":                  {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Switch Gear. and Distribution Thermal Imaging SFG20":{"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Trace Heating SFG20":              {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS PPM Unvented Cylinder SFG20":          {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - Reactive Callout (Electrical)":      {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - Reactive Callout (Joinery)":         {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - Reactive Callout (Mechanical)":      {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - Reactive Callout (Agreed Rates)":    {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - Reactive Remedial (Electrical)":     {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - Reactive Remedial (Mechanical)":     {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  "HAS - Reactive Remedial (Joinery)":        {"Zone 1":[140,70,70],"Zone 2":[230,0,80],"Zone 3":[250,0,90]},
+  // SPECIALIST  Z1:[190,120,120]  Z2:[310,0,120]  Z3:[310,0,120]
+  "HAS CCTV SFG20":                           {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS PPM Access Control SFG20":             {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS PPM Air Conditioning SFG20":           {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS PPM Fire Alarm SFG20":                 {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS PPM Intercom SFG20":                   {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS PPM Intruder Alarm SFG20":             {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS PPM Sprinkler System SFG20":           {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS - Access Control Reactive":            {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS - Air Conditioning Reactive":          {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS - CCTV Reactive":                      {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS - Commercial Gas Reactive":            {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  "HAS - Fire Systems Reactive":              {"Zone 1":[190,120,120],"Zone 2":[310,0,120],"Zone 3":[310,0,120]},
+  // PRIVATE — Zone 1 only
+  "HAS - Reactive Private (Electrical)":      {"Zone 1":[80,80,80],"Zone 2":null,"Zone 3":null},
+  "HAS - Reactive Private (Joinery)":         {"Zone 1":[80,80,80],"Zone 2":null,"Zone 3":null},
+  "HAS - Reactive Private (Mechanical)":      {"Zone 1":[80,80,80],"Zone 2":null,"Zone 3":null},
+};
+
+const DRIVING = {"Zone 1":0,"Zone 2":40,"Zone 3":40};
+const PM_RATE = 50;
+const MAT_MARKUP = 0.25;
+
+// ── state
+let lastResult = null;
+let movingQuoteId = null;
+
+const f = n => '£' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+const fh = n => n % 1 === 0 ? String(n) : n.toFixed(1);
+const getZone = () => document.querySelector('input[name="zone"]:checked').value;
+const getDelivery = () => document.querySelector('input[name="delivery"]:checked').value;
+
+// ── LABOUR CALC (3-tier)
+function calcLabour(rates, hours, zone) {
+  const [first, second, subs] = rates;
+  const eff = (zone !== 'Zone 1' && hours < 2) ? 2 : hours;
+  let cost = first;
+  if (eff > 1) cost += Math.min(1, eff - 1) * second;
+  if (eff > 2) cost += (eff - 2) * subs;
+  return { cost, eff, minApplied: eff > hours };
+}
+
+// ── MARKUP
+function subMarkupRate(cost) {
+  if (cost < 500)  return 0.35;
+  if (cost < 1000) return 0.25;
+  if (cost < 5000) return 0.20;
+  return 0.15;
+}
+
+// ── UI UPDATES
+function onDeliveryChange(val) {
+  document.getElementById('selfFlow').classList.toggle('hidden', val !== 'self');
+  document.getElementById('subFlow').classList.toggle('hidden', val !== 'sub');
+}
+function onZoneChange() {
+  const z = getZone();
+  document.getElementById('zone-driving-note').classList.toggle('hidden', z === 'Zone 1');
+  document.getElementById('drivingField').classList.toggle('hidden', z === 'Zone 1');
+  onJobTypeChange(); updateMinNote();
+}
+function onJobTypeChange() {
+  const jt = document.getElementById('jobType').value;
+  const z  = getZone();
+  const r  = SOR[jt];
+  document.getElementById('unavail-note').style.display = (r && r[z] === null) ? 'block' : 'none';
+}
+function updateMinNote() {
+  const z = getZone(), h = parseFloat(document.getElementById('labourHours').value)||0;
+  document.getElementById('min-note').classList.toggle('hidden', !(z!=='Zone 1' && h>0 && h<2));
+}
+function updateSubPreview() {
+  const cost = parseFloat(document.getElementById('subCost').value)||0;
+  const el   = document.getElementById('sub-preview');
+  if (!cost) { el.textContent = '💼 Enter cost to see markup tier'; return; }
+  const rate = subMarkupRate(cost), pct = Math.round(rate*100);
+  const tier = cost<500?'Under £500':cost<1000?'£500–£1k':cost<5000?'£1k–£5k':'£5k+';
+  el.textContent = `💼 ${tier} tier — ${pct}% markup = ${f(cost*rate)} added`;
+}
+
+// ── CALCULATE
+function calculate() {
+  const delivery = getDelivery();
+  const jobNum   = document.getElementById('jobNumber').value.trim()||'—';
+  const salesOp  = document.getElementById('salesOpp').value.trim()||'—';
+  let rows = [], grandEx = 0, resultObj = {};
+
+  if (delivery === 'self') {
+    const zone    = getZone();
+    const jobType = document.getElementById('jobType').value;
+    const labH    = parseFloat(document.getElementById('labourHours').value)||0;
+    const drvH    = parseFloat(document.getElementById('drivingHours').value)||0;
+    const matCost = parseFloat(document.getElementById('materialsCostSelf').value)||0;
+    const desc    = document.getElementById('descSelf').value.trim();
+    const rates   = SOR[jobType];
+    const zr      = rates ? rates[zone] : null;
+    if (!zr) { alert('This job type is not available for the selected zone.'); return; }
+    if (labH <= 0) { alert('Please enter the number of labour hours.'); return; }
+
+    const {cost:labCost, eff, minApplied} = calcLabour(zr, labH, zone);
+    const [first, second, subs] = zr;
+
+    // Labour breakdown rows
+    if (zone === 'Zone 1') {
+      rows.push({desc:'1st Hour', sub:`${jobType} · ${zone} @ ${f(first)}`, amt:first});
+      if (eff > 1) {
+        const addH = eff - 1;
+        if (second > 0 && addH <= 1) {
+          rows.push({desc:`2nd Hour`, sub:`@ ${f(second)}/hr`, amt:Math.min(1,addH)*second});
+          if (eff > 2) rows.push({desc:`Subsequent ${fh(eff-2)} hr${eff-2!==1?'s':''}`, sub:`@ ${f(subs)}/hr`, amt:(eff-2)*subs});
+        } else {
+          rows.push({desc:`Additional ${fh(addH)} hr${addH!==1?'s':''}`, sub:`@ ${f(subs)}/hr`, amt:addH*subs});
+        }
+      }
+    } else {
+      rows.push({desc:`1st 2 Hours (Zone 2/3 minimum)`, sub:`${jobType} · ${zone} @ ${f(first)}`, amt:first});
+      if (eff > 2) rows.push({desc:`Subsequent ${fh(eff-2)} hr${eff-2!==1?'s':''}`, sub:`@ ${f(subs)}/hr`, amt:(eff-2)*subs});
+      if (minApplied) rows.push({desc:`2-hour minimum applied (entered ${fh(labH)} hr)`, note:true});
+    }
+    grandEx += labCost;
+
+    if (zone !== 'Zone 1' && drvH > 0) {
+      const dc = drvH * DRIVING[zone];
+      rows.push({desc:`Driving — ${fh(drvH)} hr${drvH!==1?'s':''} (GPS)`, sub:`@ ${f(DRIVING[zone])}/hr · ${zone}`, amt:dc});
+      grandEx += dc;
+    }
+    if (matCost > 0) {
+      const mm = matCost * MAT_MARKUP;
+      rows.push({desc:'Materials (cost)', sub:'As quoted / supplied', amt:matCost});
+      rows.push({desc:'Materials Markup (25%)', sub:'Applied to materials cost', amt:mm});
+      grandEx += matCost + mm;
+    }
+
+    resultObj = {delivery:'self', zone, jobType, labH, drvH, matCost, desc, jobNum, salesOp};
+    document.getElementById('res-del').textContent = 'Self Delivered · '+zone;
+
+  } else {
+    const subCost = parseFloat(document.getElementById('subCost').value)||0;
+    const pmH     = parseFloat(document.getElementById('pmHours').value)||0;
+    const desc    = document.getElementById('descSub').value.trim();
+    if (subCost <= 0) { alert('Please enter the subcontractor cost.'); return; }
+
+    const rate = subMarkupRate(subCost), pct = Math.round(rate*100);
+    const tier = subCost<500?'Under £500':subCost<1000?'£500–£1k':subCost<5000?'£1k–£5k':'£5k+';
+    const mu   = subCost * rate;
+    rows.push({desc:'Subcontractor Cost', sub:'As quoted by subcontractor', amt:subCost});
+    rows.push({desc:`Subcontractor Markup (${pct}%)`, sub:`${tier} sliding scale tier`, amt:mu});
+    grandEx += subCost + mu;
+
+    if (pmH > 0) {
+      const pc = pmH * PM_RATE;
+      rows.push({desc:`Project Management — ${fh(pmH)} hr${pmH!==1?'s':''}`, sub:`@ ${f(PM_RATE)}/hr`, amt:pc});
+      grandEx += pc;
+    }
+
+    resultObj = {delivery:'sub', subCost, pmH, desc, jobNum, salesOp};
+    document.getElementById('res-del').textContent = 'Subcontracted';
+  }
+
+  const vat = grandEx * 0.2, total = grandEx + vat;
+  resultObj.grandEx = grandEx; resultObj.vat = vat; resultObj.total = total;
+  resultObj.rows = rows; resultObj.timestamp = new Date().toISOString();
+  lastResult = resultObj;
+
+  // Render
+  document.getElementById('res-total').textContent = f(grandEx);
+  document.getElementById('res-job').textContent   = jobNum;
+  document.getElementById('res-opp').textContent   = salesOp;
+
+  let html = '';
+  rows.forEach(r => {
+    if (r.note) {
+      html += `<tr class="tr-note"><td colspan="2">⚠ ${r.desc}</td></tr>`;
+    } else {
+      html += `<tr><td>${r.desc}<br><span class="sub-desc">${r.sub||''}</span></td><td class="amt">${f(r.amt)}</td></tr>`;
+    }
+  });
+  html += `<tr class="tr-total"><td>Subtotal (ex VAT)</td><td>${f(grandEx)}</td></tr>`;
+  html += `<tr class="tr-vat"><td>VAT (20%)</td><td>${f(vat)}</td></tr>`;
+  html += `<tr class="tr-grand"><td>Total (inc. VAT)</td><td>${f(total)}</td></tr>`;
+  document.getElementById('breakdown').innerHTML = html;
+
+  const desc = resultObj.desc || '';
+  const descSec = document.getElementById('res-desc-section');
+  if (desc) { descSec.classList.remove('hidden'); document.getElementById('res-desc').textContent = desc; }
+  else descSec.classList.add('hidden');
+
+  const el = document.getElementById('results');
+  el.style.display = 'block';
+  setTimeout(() => el.scrollIntoView({behavior:'smooth',block:'start'}), 50);
+}
+
+// ── COPY
+function copyBreakdown() {
+  if (!lastResult) return;
+  const rows = [...document.querySelectorAll('#breakdown tr')];
+  const text = rows.map(r=>[...r.querySelectorAll('td')].map(c=>c.innerText.replace(/\n/g,' ')).join('\t')).join('\n');
+  const h = `Job: ${lastResult.jobNum}\tOpp: ${lastResult.salesOp}\n\n`;
+  navigator.clipboard.writeText(h+text).then(()=>alert('Copied!'));
+}
+
+// ── RESET
+function resetForm() {
+  ['jobNumber','salesOpp','labourHours','drivingHours','subCost','pmHours','materialsCostSelf','descSelf','descSub'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('d-self').checked=true;
+  document.getElementById('z1').checked=true;
+  document.getElementById('results').style.display='none';
+  lastResult=null;
+  onDeliveryChange('self'); onZoneChange();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════
+function getStore() { try { return JSON.parse(localStorage.getItem('has_quotes')||'{"quotes":[],"folders":["General"]}'); } catch(e) { return {quotes:[],folders:['General']}; } }
+function saveStore(s) { localStorage.setItem('has_quotes', JSON.stringify(s)); }
+
+function getFolders() { return getStore().folders; }
+function getQuotes()  { return getStore().quotes; }
+
+// ── SAVE MODAL
+function openSaveModal() {
+  if (!lastResult) { alert('Please calculate a quote first.'); return; }
+  const store = getStore();
+  const defName = lastResult.jobNum !== '—' ? `${lastResult.jobNum} — ${new Date().toLocaleDateString('en-GB')}` : `Quote — ${new Date().toLocaleDateString('en-GB')}`;
+  document.getElementById('quoteName').value = defName;
+  const fsel = document.getElementById('quoteFolder');
+  fsel.innerHTML = store.folders.map(f=>`<option>${f}</option>`).join('');
+  document.getElementById('saveModal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('quoteName').focus(),100);
+}
+function saveQuote() {
+  const name   = document.getElementById('quoteName').value.trim();
+  const folder = document.getElementById('quoteFolder').value;
+  if (!name) { alert('Please enter a quote name.'); return; }
+  const store = getStore();
+  const id = Date.now().toString();
+  store.quotes.unshift({ id, name, folder, data: lastResult, savedAt: new Date().toISOString() });
+  saveStore(store);
+  closeModal('saveModal');
+  updateSavedCount();
+  alert(`✅ Quote "${name}" saved to ${folder}.`);
+}
+
+// ── NEW FOLDER
+function openNewFolderModal() {
+  document.getElementById('newFolderName').value='';
+  document.getElementById('folderModal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('newFolderName').focus(),100);
+}
+function createFolder() {
+  const name = document.getElementById('newFolderName').value.trim();
+  if (!name) { alert('Please enter a folder name.'); return; }
+  const store = getStore();
+  if (store.folders.includes(name)) { alert('A folder with that name already exists.'); return; }
+  store.folders.push(name);
+  saveStore(store);
+  closeModal('folderModal');
+  renderSavedTab();
+}
+
+// ── SUBMIT
+function openSubmitModal() {
+  if (!lastResult) { alert('Please calculate a quote first.'); return; }
+  buildSubmitPreview(lastResult);
+  document.getElementById('submitModal').classList.remove('hidden');
+}
+function buildSubmitPreview(d) {
+  const lines = [
+    `Job Number:   ${d.jobNum}`,
+    `Sales Opp:    ${d.salesOp}`,
+    `Delivery:     ${d.delivery === 'self' ? 'Self Delivered ('+d.zone+')' : 'Subcontracted'}`,
+    d.delivery==='self' ? `Job Type:     ${d.jobType}` : `Sub Cost:     ${f(d.subCost)}`,
+    d.delivery==='self' && d.labH ? `Labour Hrs:   ${d.labH}` : '',
+    d.delivery==='sub' && d.pmH  ? `PM Hours:     ${d.pmH}` : '',
+    `Subtotal:     ${f(d.grandEx)}`,
+    `VAT (20%):    ${f(d.vat)}`,
+    `Total:        ${f(d.total)}`,
+    d.desc ? `\nDescription:\n${d.desc}` : '',
+  ].filter(Boolean);
+  document.getElementById('submitPreview').textContent = lines.join('\n');
+}
+function submitToBigChange() { alert('Big Change API not yet configured. Please contact your system administrator.'); }
+
+let viewingData = null;
+function openSubmitFromView() {
+  if (viewingData) { closeModal('viewModal'); buildSubmitPreview(viewingData); document.getElementById('submitModal').classList.remove('hidden'); }
+}
+
+// ── SAVED QUOTES TAB
+let activeFolder = 'All';
+
+function renderSavedTab() {
+  const store   = getStore();
+  const folders = ['All', ...store.folders];
+  const quotes  = store.quotes;
+
+  // Folder chips
+  const fc = document.getElementById('folderFilter');
+  fc.innerHTML = folders.map(f =>
+    `<button class="folder-chip${f===activeFolder?' active':''}" onclick="setFolder('${f}')">${f} <span style="color:var(--text3)">(${f==='All'?quotes.length:quotes.filter(q=>q.folder===f).length})</span></button>`
+  ).join('');
+
+  // Quote cards
+  const filtered = activeFolder==='All' ? quotes : quotes.filter(q=>q.folder===activeFolder);
+  const ql = document.getElementById('quoteList');
+  if (!filtered.length) {
+    ql.innerHTML = `<div class="empty-state"><div class="es-icon">📂</div><p>No quotes ${activeFolder==='All'?'saved yet':'in this folder'}.</p></div>`;
+    return;
+  }
+  ql.innerHTML = filtered.map(q => {
+    const d = q.data;
+    const delBadge = d.delivery==='self'?`🔧 Self · ${d.zone}`:'🤝 Subcontracted';
+    const dt = new Date(q.savedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    return `<div class="quote-card">
+      <div class="qc-top">
+        <div>
+          <div class="qc-name">${q.name}</div>
+          <div class="qc-meta" style="margin-top:4px">
+            <span>📋 ${d.jobNum}</span><span>📁 ${q.folder}</span><span>🗓 ${dt}</span>
+            <span class="qc-tag">${delBadge}</span>
+          </div>
+        </div>
+        <div class="qc-total">${f(d.total)}</div>
+      </div>
+      <div class="qc-actions">
+        <button class="qc-btn view" onclick="viewQuote('${q.id}')">👁 View</button>
+        <button class="qc-btn move" onclick="openMoveModal('${q.id}')">📁 Move</button>
+        <button class="qc-btn del" onclick="deleteQuote('${q.id}')">🗑 Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setFolder(f) { activeFolder=f; renderSavedTab(); }
+
+function viewQuote(id) {
+  const store = getStore();
+  const q = store.quotes.find(x=>x.id===id);
+  if (!q) return;
+  viewingData = q.data;
+  document.getElementById('viewTitle').textContent = q.name;
+  const d = q.data;
+  let html = `<div style="font-size:13px;color:var(--text2);margin-bottom:14px">Saved ${new Date(q.savedAt).toLocaleString('en-GB')} · ${q.folder}</div>`;
+  html += `<div style="background:linear-gradient(135deg,#0071E3,#0051A8);border-radius:12px;padding:18px;text-align:center;color:#fff;margin-bottom:14px">
+    <div style="font-size:11px;opacity:.7;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">Total ex. VAT</div>
+    <div style="font-size:2.2rem;font-weight:700;letter-spacing:-.03em">${f(d.grandEx)}</div>
+  </div>`;
+  html += `<table style="width:100%;border-collapse:collapse;font-size:14px">`;
+  (d.rows||[]).forEach(r => {
+    if (r.note) html += `<tr><td colspan="2" style="padding:4px 0;color:var(--orange);font-size:12px">⚠ ${r.desc}</td></tr>`;
+    else html += `<tr style="border-bottom:1px solid var(--border)"><td style="padding:9px 0">${r.desc}<br><span style="font-size:11px;color:var(--text2)">${r.sub||''}</span></td><td style="text-align:right;font-weight:500;white-space:nowrap;padding-left:12px">${f(r.amt)}</td></tr>`;
+  });
+  html += `<tr><td style="padding:10px 0;font-weight:700">Subtotal</td><td style="text-align:right;font-weight:700">${f(d.grandEx)}</td></tr>`;
+  html += `<tr><td style="padding:4px 0;color:var(--text2)">VAT (20%)</td><td style="text-align:right;color:var(--text2)">${f(d.vat)}</td></tr>`;
+  html += `<tr style="border-top:2px solid var(--border)"><td style="padding:12px 0;font-size:17px;font-weight:700">Total</td><td style="text-align:right;font-size:17px;font-weight:700">${f(d.total)}</td></tr>`;
+  html += `</table>`;
+  if (d.desc) html += `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)"><div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Description of Works</div><div style="font-size:14px;line-height:1.6">${d.desc}</div></div>`;
+  document.getElementById('viewContent').innerHTML = html;
+  document.getElementById('viewModal').classList.remove('hidden');
+}
+
+function deleteQuote(id) {
+  if (!confirm('Delete this quote? This cannot be undone.')) return;
+  const store = getStore();
+  store.quotes = store.quotes.filter(q=>q.id!==id);
+  saveStore(store);
+  updateSavedCount();
+  renderSavedTab();
+}
+
+function openMoveModal(id) {
+  movingQuoteId = id;
+  const store = getStore();
+  const mf = document.getElementById('moveFolder');
+  mf.innerHTML = store.folders.map(f=>`<option>${f}</option>`).join('');
+  const current = store.quotes.find(q=>q.id===id);
+  if (current) mf.value = current.folder;
+  document.getElementById('moveModal').classList.remove('hidden');
+}
+function confirmMove() {
+  const folder = document.getElementById('moveFolder').value;
+  const store  = getStore();
+  const q      = store.quotes.find(x=>x.id===movingQuoteId);
+  if (q) { q.folder = folder; saveStore(store); }
+  closeModal('moveModal');
+  renderSavedTab();
+}
+
+function updateSavedCount() {
+  const n = getStore().quotes.length;
+  const el = document.getElementById('saved-count');
+  el.textContent = n; el.style.display = n ? '' : 'none';
+}
+
+// ── TABS
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('tab-content-'+tab).classList.add('active');
+  if (tab==='saved') renderSavedTab();
+}
+
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// Close modals on backdrop click
+document.querySelectorAll('.modal-bg').forEach(bg => bg.addEventListener('click', e => { if(e.target===bg) bg.classList.add('hidden'); }));
+
+// ── INIT
+document.querySelectorAll('input[name="zone"]').forEach(r=>r.addEventListener('change',onZoneChange));
+onDeliveryChange('self'); onZoneChange(); updateSavedCount();
+</script>
+</body>
+</html>
